@@ -147,8 +147,14 @@ static int parse_flags(char *flags, struct flag_list *fl, char **key_loc,
                 /* It's not a known flag, so it must be a filesystem specific
                  * option.  Add it to fs_options if it was passed in.
                  */
-                strlcat(fs_options, p, fs_options_len);
-                strlcat(fs_options, ",", fs_options_len);
+#ifndef HAVE_SELINUX
+                /* Drop context option from non-selinux builds */
+                if (strncmp(p,"context=",8))
+#endif
+                {
+                    strlcat(fs_options, p, fs_options_len);
+                    strlcat(fs_options, ",", fs_options_len);
+                }
             } else {
                 /* fs_options was not passed in, so if the flag is unknown
                  * it's an error.
@@ -523,11 +529,11 @@ int fs_mgr_do_mount(char *fstab_file, char *n_name, char *n_blk_dev, char *tmp_m
         /* We found our match */
         /* First check the filesystem if requested */
         if (fstab[i].fs_mgr_flags & MF_WAIT) {
-            wait_for_file(fstab[i].blk_dev, WAIT_TIMEOUT);
+            wait_for_file(n_blk_dev, WAIT_TIMEOUT);
         }
 
         if (fstab[i].fs_mgr_flags & MF_CHECK) {
-            check_fs(fstab[i].blk_dev, fstab[i].type, fstab[i].mnt_point);
+            check_fs(n_blk_dev, fstab[i].type, fstab[i].mnt_point);
         }
 
         /* Now mount it where requested */
